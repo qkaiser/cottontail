@@ -218,7 +218,7 @@ if __name__ == "__main__":
             signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         # Launch one process per vhost
-        pool = multiprocessing.Pool(2)
+        pool = multiprocessing.Pool(len(rbmq.get_vhosts()))
         try:
             for vhost in rbmq.get_vhosts():
                 pool.apply_async(subproc, \
