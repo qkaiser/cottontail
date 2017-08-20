@@ -2,6 +2,8 @@
 
 A set of scripts to capture RabbitMQ messages being sent through that broker.
 
+![cute](cottontail.jpg)
+
 !! THIS IS STILL EXPERIMENTAL. DO. NOT. MESS. WITH. LIVE. SYSTEMS. !!
 
 ## Installation
@@ -20,7 +22,7 @@ This tool uses rabbitmq-management HTTP API to request information about vhosts,
 virtualenv ve
 source ./ve/bin/activate
 pip install -r requirements
-python main.py -h localhost --port 5672 -u guest -p guest
+python main.py --url http://localhost:15672/ --username guest --password guest
 ```
 
 You should see something along those lines:
