@@ -32,7 +32,8 @@ class RabbitMQManagementClient(object):
         password (str, optional): account's password
     """
 
-    def __init__(self, host, port=15672, username="guest", password="guest"):
+    def __init__(self, host, port=15672, username="guest", password="guest",\
+        ssl=False):
         """Constructor
 
         Note:
@@ -49,6 +50,7 @@ class RabbitMQManagementClient(object):
         self._port = port
         self._username = username
         self._password = password
+        self._scheme = "https" if ssl else "http"
 
     def get_request(self, path):
         """Wrapper for GET requests to the API.
@@ -63,8 +65,9 @@ class RabbitMQManagementClient(object):
             UnauthorizedException
         """
         response = requests.get(
-            "http://%s:%d/api/%s" % (self._host, self._port, path),
-            auth=(self._username, self._password)
+            "%s://%s:%d/api/%s" % (self._scheme, self._host, self._port, path),
+            auth=(self._username, self._password),
+            verify=False
         )
 
         if response.status_code == 200:
@@ -74,6 +77,41 @@ class RabbitMQManagementClient(object):
                 "Authorization error: can't access /api/%s" % path)
         else:
             raise Exception("An error occured")
+
+    def post_request(self, path, data):
+        """Wrapper for POST requests to the API
+
+        Args:
+            path (str): REST path appended to /api
+            data (object): POST body
+
+        Returns:
+            HTTP response JSON object
+
+        Raises:
+            UnauthorizedException
+        """
+        response = requests.post(
+            "%s://%s:%d/api/%s" % (self._scheme, self._host, self._port, path),
+            auth=(self._username, self._password),
+            json=data,
+            verify=False
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 401:
+            raise UnauthorizedAccessException(
+                "Authorization error: can't access /api/%s" % path)
+        else:
+            raise Exception("An error occured")
+
+    def get_amqp_listeners(self):
+        """
+        Request the API for AMQP listeners.
+        """
+        overview = self.get_overview()
+        return [l for l in overview["listeners"] if l["protocol"] == "amqp"]
 
     def get_overview(self):
         """
@@ -174,7 +212,22 @@ class RabbitMQManagementClient(object):
         """
         return self.get_request("queue/%s/%s" % (vhost, name))
 
-    def get_bindings(self, vhost):
+    def get_messages(self, vhost, queue, count=10, requeue=True):
+        """
+        Get messages currently stored in queue.
+        """
+        return self.post_request(
+            "queues/%s/%s/get" % (quote(vhost, safe=''), queue),
+            {
+                "count": count,
+                "encoding": "auto",
+                "name": queue,
+                "requeue": str(requeue).lower(),
+                "vhost": vhost
+            }
+        )
+
+    def get_bindings(self, vhost=None):
         """
         A list of all bindings (in a given virtual host).
         """
