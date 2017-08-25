@@ -61,7 +61,7 @@ def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
     else:
         raise Exception("Not supported yet")
 
-def subproc(host='localhost', port=5672, username='guest', password='guest', vhost_name='/'):
+def subproc(host='localhost', port=5672, ssl=False, username='guest', password='guest', vhost_name='/'):
     """
     Function that is launched within a process. We launch one process per
     vhost, each using a blocking connection.
@@ -72,10 +72,18 @@ def subproc(host='localhost', port=5672, username='guest', password='guest', vho
     Returns:
         None. Triggered when user hits ctrl-c
     """
-    logger.verbose("Connecting to amqp://%s:%d/%s" % (host, port, vhost_name))
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host, port, vhost_name,\
-                pika.PlainCredentials(username, password)))
+    logger.verbose("Connecting to amqp%s://%s:%d/%s" % ("s" if ssl else "", host, port, vhost_name))
+
+    ssl_options = {}
+    if ssl:
+        import ssl as s
+        ssl_options["cert_reqs"] = s.CERT_NONE
+
+    credentials = pika.PlainCredentials(username, password)
+    parameters = pika.ConnectionParameters(
+        host = host, port = port, virtual_host=vhost_name,
+        credentials = credentials, ssl = ssl, ssl_options = ssl_options)
+    connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
 
     def callback(ch, method, properties, body):
@@ -216,6 +224,9 @@ if __name__ == "__main__":
         for listener in rbmq.get_amqp_listeners():
             # we attempt only low level tcp connect here.
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # if bound to all, we try to reach on rabbit_ip
+            if listener["ip_address"] == "::":
+                listener["ip_address"] = rabbit_ip
             result = sock.connect_ex((listener["ip_address"], listener["port"]))
             sock.close()
             # port is open, let's use that listener
@@ -230,6 +241,7 @@ if __name__ == "__main__":
                 for vhost in rbmq.get_vhosts():
                     pool.apply_async(subproc, \
                         (amqp_listener["ip_address"], amqp_listener["port"],\
+                        amqp_listener["protocol"]=="amqp/ssl",
                         args.username, args.password, vhost["name"],))
                 pool.close()
                 pool.join()
