@@ -113,7 +113,7 @@ class RabbitMQManagementClient(object):
         Request the API for AMQP listeners.
         """
         overview = self.get_overview()
-        return [l for l in overview["listeners"] if l["protocol"] == "amqp"]
+        return [l for l in overview["listeners"] if "amqp" in l["protocol"]]
 
     def get_overview(self):
         """
