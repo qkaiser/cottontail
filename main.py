@@ -15,6 +15,7 @@ import signal
 import logging
 from urlparse import urlparse
 import argparse
+import socket
 import pika
 import coloredlogs
 import verboselogs
@@ -167,6 +168,11 @@ def subproc(host='localhost', port=5672, username='guest', password='guest', vho
         connection.close()
         return
 
+def init_worker():
+    """use Tor, use Signal"""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 if __name__ == "__main__":
 
     description = "cottontail v%s, %s(%s)" % \
@@ -187,7 +193,8 @@ if __name__ == "__main__":
         o.hostname,
         port=o.port,
         username=args.username,
-        password=args.password
+        password=args.password,
+        ssl=(o.scheme == "https")
     )
 
     try:
@@ -204,32 +211,47 @@ if __name__ == "__main__":
         logger.verbose("%d vhosts detected: %s" % \
                 (len(vhosts), ", ".join([vhost["name"] for vhost in vhosts])))
 
-        # Get AMQP connection parameters from API
-        amqp_port = 5672
-        amqp_host = o.hostname
-        for listener in overview["listeners"]:
-            if listener["protocol"] == "amqp":
-                amqp_port = listener["port"]
-            if listener["ip_address"] != "::":
-                amqp_host = listener["ip_address"]
+        rabbit_ip = socket.gethostbyname(o.hostname)
+        amqp_listener = None
+        for listener in rbmq.get_amqp_listeners():
+            # we attempt only low level tcp connect here.
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex((listener["ip_address"], listener["port"]))
+            sock.close()
+            # port is open, let's use that listener
+            if result == 0:
+                amqp_listener = listener
+                break
 
-        def init_worker():
-            """use Tor, use Signal"""
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-        # Launch one process per vhost
-        pool = multiprocessing.Pool(len(rbmq.get_vhosts()))
-        try:
-            for vhost in rbmq.get_vhosts():
-                pool.apply_async(subproc, \
-                        (amqp_host, amqp_port,\
+        if amqp_listener is not None:
+            # Launch one process per vhost
+            pool = multiprocessing.Pool(len(rbmq.get_vhosts()))
+            try:
+                for vhost in rbmq.get_vhosts():
+                    pool.apply_async(subproc, \
+                        (amqp_listener["ip_address"], amqp_listener["port"],\
                         args.username, args.password, vhost["name"],))
-            pool.close()
-            pool.join()
+                pool.close()
+                pool.join()
 
-        except KeyboardInterrupt:
-            logger.info("Caught KeyboardInterrupt, terminating workers")
-            pool.terminate()
-            pool.join()
+            except KeyboardInterrupt:
+                logger.info("Caught KeyboardInterrupt, terminating workers")
+                pool.terminate()
+                pool.join()
+        else:
+            logger.warning("AMQP listener not reachable."\
+                " Dumping queues via HTTP API. Note that only messages that"\
+                " haven't been consumed yet will be shown.")
+            for vhost in rbmq.get_vhosts():
+                for queue in rbmq.get_queues(vhost["name"]):
+                    if not queue["name"].startswith("amq."):
+                        for message in rbmq.get_messages(vhost["name"],\
+                                queue["name"], count=10000):
+                            logger.info("Message from [vhost=%s][exchange=%s]"\
+                                    "[routing_key=%s]: %s" % (
+                                        vhost["name"], message["exchange"],
+                                        message["routing_key"],
+                                        message["payload"]))
+
     except UnauthorizedAccessException as e:
         print e.message
