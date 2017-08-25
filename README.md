@@ -76,6 +76,17 @@ sudo docker run -d --hostname my-rabbit --name some-rabbit -p 15672:15672 -p 567
 If you need more information about that docker image: https://hub.docker.com/_/rabbitmq/
 
 
+## Changelog
+
+### v0.2.0
+
+* Support for HTTPS connection to rabbitmq_management API.
+* Fallback to dumping messages via HTTP API if AMQP listener is not reachable
+
+### v0.1.0
+
+Initial release
+
 ## References
 
 Something something
