@@ -78,6 +78,10 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.3.0
+
+* Support for AMQP connections over SSL
+
 ### v0.2.0
 
 * Support for HTTPS connection to rabbitmq_management API.
