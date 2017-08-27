@@ -128,7 +128,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 routing_key=method.routing_key,
                 properties=pika.BasicProperties(
                     correlation_id=properties.correlation_id,
-                    reply_to=properties.reply_to
+                    reply_to=properties.reply_to,
+                    headers=properties.headers
                 ),
                 body=body,
             )
