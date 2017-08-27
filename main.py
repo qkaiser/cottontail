@@ -26,6 +26,14 @@ __author__ = 'Quentin Kaiser'
 __email__ = 'kaiserquentin@gmail.com'
 execfile('VERSION')
 
+HEADER = """
+       /\ /|
+       \ V/
+       | "")     Cottontail v%s
+       /  |      %s (%s)
+      /  \\\\
+    *(__\_\)
+    """ % (__version__, __author__, __email__)
 
 def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
     """
@@ -108,7 +116,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
         logger.debug("\tHeaders:")
         for key in properties.headers:
             logger.debug("\t\t%s=%s" % (key, properties.headers[key]))
-        logger.debug("\tDelivery-mode: %s" % "persistent" if properties.delivery_mode == 2 else "non persistent")
+        logger.debug("\tDelivery-mode: %s" % \
+            "persistent" if properties.delivery_mode == 2 else "non persistent")
         logger.debug("\tPriority: %s" % properties.priority)
         logger.debug("\tCorrelation-id: %s" % properties.correlation_id)
         logger.debug("\tReply-to: %s" % properties.reply_to)
@@ -209,14 +218,14 @@ def init_worker():
 
 if __name__ == "__main__":
 
-    description = "cottontail v%s, %s(%s)" % \
-        (__version__, __author__, __email__)
-
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-u', '--url', type=str, default="http://localhost:15672/",\
-        help="rabbitmq_management URL")
-    parser.add_argument('--username', type=str, default="guest", help="username")
-    parser.add_argument('--password', type=str, default="guest", help="password")
+    print HEADER
+    parser = argparse.ArgumentParser(description=\
+        "Capture all RabbitMQ messages being sent through a broker.")
+    parser.add_argument('url', type=str, help="rabbitmq_management URL")
+    parser.add_argument('--username', type=str, default="guest",\
+        help="rabbitmq_management username")
+    parser.add_argument('--password', type=str, default="guest",\
+        help="rabbitmq_management password")
     parser.add_argument('-v', '--verbose', help="increase output verbosity",\
         action='store_true')
     args = parser.parse_args()
