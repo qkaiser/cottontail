@@ -67,6 +67,11 @@ def subproc(host='localhost', port=5672, ssl=False, username='guest', password='
     vhost, each using a blocking connection.
 
     Args:
+        host (str): AMQP server hostname or IP address
+        port (int): AMQP server listening port
+        ssl (bool): indicates if AMQP over SSL
+        username (str): AMQP credentials
+        password (str): AMQP credentials
         vhost_name (str): vhost name to which our rabbitmq connection binds to
 
     Returns:
