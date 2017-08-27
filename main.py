@@ -61,12 +61,17 @@ def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
     else:
         raise Exception("Not supported yet")
 
-def subproc(host='localhost', port=5672, ssl=False, username='guest', password='guest', vhost_name='/'):
+def subproc(host, port, ssl, username, password, vhost_name):
     """
     Function that is launched within a process. We launch one process per
     vhost, each using a blocking connection.
 
     Args:
+        host (str): AMQP server hostname or IP address
+        port (int): AMQP server listening port
+        ssl (bool): indicates if AMQP over SSL
+        username (str): AMQP credentials
+        password (str): AMQP credentials
         vhost_name (str): vhost name to which our rabbitmq connection binds to
 
     Returns:
@@ -123,7 +128,8 @@ def subproc(host='localhost', port=5672, ssl=False, username='guest', password='
                 routing_key=method.routing_key,
                 properties=pika.BasicProperties(
                     correlation_id=properties.correlation_id,
-                    reply_to=properties.reply_to
+                    reply_to=properties.reply_to,
+                    headers=properties.headers
                 ),
                 body=body,
             )
