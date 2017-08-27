@@ -77,7 +77,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
     Returns:
         None. Triggered when user hits ctrl-c
     """
-    logger.verbose("Connecting to amqp%s://%s:%d/%s" % ("s" if ssl else "", host, port, vhost_name))
+    logger.verbose("Connecting to amqp%s://%s:%d/%s" % \
+        ("s" if ssl else "", host, port, vhost_name))
 
     ssl_options = {}
     if ssl:
@@ -86,8 +87,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
 
     credentials = pika.PlainCredentials(username, password)
     parameters = pika.ConnectionParameters(
-        host = host, port = port, virtual_host=vhost_name,
-        credentials = credentials, ssl = ssl, ssl_options = ssl_options)
+        host=host, port=port, virtual_host=vhost_name,
+        credentials=credentials, ssl=ssl, ssl_options=ssl_options)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
 
@@ -127,9 +128,20 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 exchange=method.exchange,
                 routing_key=method.routing_key,
                 properties=pika.BasicProperties(
+                    content_type=properties.content_type,
+                    content_encoding=properties.content_encoding,
+                    headers=properties.headers,
+                    delivery_mode=properties.delivery_mode,
+                    priority=properties.priority,
                     correlation_id=properties.correlation_id,
                     reply_to=properties.reply_to,
-                    headers=properties.headers
+                    expiration=properties.expiration,
+                    message_id=properties.message_id,
+                    timestamp=properties.timestamp,
+                    type=properties.type,
+                    user_id=properties.user_id,
+                    app_id=properties.app_id,
+                    cluster_id=properties.cluster_id
                 ),
                 body=body,
             )
@@ -247,7 +259,7 @@ if __name__ == "__main__":
                 for vhost in rbmq.get_vhosts():
                     pool.apply_async(subproc, \
                         (amqp_listener["ip_address"], amqp_listener["port"],\
-                        amqp_listener["protocol"]=="amqp/ssl",
+                        amqp_listener["protocol"] == "amqp/ssl",\
                         args.username, args.password, vhost["name"],))
                 pool.close()
                 pool.join()
