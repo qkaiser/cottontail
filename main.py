@@ -61,7 +61,7 @@ def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
     else:
         raise Exception("Not supported yet")
 
-def subproc(host='localhost', port=5672, ssl=False, username='guest', password='guest', vhost_name='/'):
+def subproc(host, port, ssl, username, password, vhost_name):
     """
     Function that is launched within a process. We launch one process per
     vhost, each using a blocking connection.
