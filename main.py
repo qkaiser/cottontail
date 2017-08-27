@@ -26,14 +26,6 @@ __author__ = 'Quentin Kaiser'
 __email__ = 'kaiserquentin@gmail.com'
 execfile('VERSION')
 
-logger = verboselogs.VerboseLogger('cottontail')
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.VERBOSE)
-coloredlogs.install(
-    fmt='%(asctime)s %(levelname)s %(message)s',
-    logger=logger,
-    level='verbose'
-)
 
 def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
     """
@@ -111,6 +103,23 @@ def subproc(host, port, ssl, username, password, vhost_name):
         logger.info("Message from [vhost=%s][exchange=%s][routing_key=%s]:"\
             " %r" % (vhost_name, method.exchange, method.routing_key, body))
 
+        logger.debug("\tContent-type: %s" % properties.content_type)
+        logger.debug("\tContent-encoding: %s" % properties.content_encoding)
+        logger.debug("\tHeaders:")
+        for key in properties.headers:
+            logger.debug("\t\t%s=%s" % (key, properties.headers[key]))
+        logger.debug("\tDelivery-mode: %s" % "persistent" if properties.delivery_mode == 2 else "non persistent")
+        logger.debug("\tPriority: %s" % properties.priority)
+        logger.debug("\tCorrelation-id: %s" % properties.correlation_id)
+        logger.debug("\tReply-to: %s" % properties.reply_to)
+        logger.debug("\tExpiration: %s" % properties.expiration)
+        logger.debug("\tMessage-id: %s" % properties.message_id)
+        logger.debug("\tTimestamp: %s" % properties.timestamp)
+        logger.debug("\tType: %s" % properties.type)
+        logger.debug("\tUser-id: %s" % properties.user_id)
+        logger.debug("\tApp-id: %s" % properties.app_id)
+        logger.debug("\tCluster-id: %s" % properties.cluster_id)
+
         # check if a consumer is present if we need to requeue
         consumer_present = False
         for channel in rbmq.get_channels():
@@ -123,7 +132,6 @@ def subproc(host, port, ssl, username, password, vhost_name):
         # if other consumers are present, we requeue the message so we don't
         # mess things up.
         if consumer_present:
-            logger.debug("Consumer present, requeuing...")
             ch.basic_publish(
                 exchange=method.exchange,
                 routing_key=method.routing_key,
@@ -209,7 +217,18 @@ if __name__ == "__main__":
         help="rabbitmq_management URL")
     parser.add_argument('--username', type=str, default="guest", help="username")
     parser.add_argument('--password', type=str, default="guest", help="password")
+    parser.add_argument('-v', '--verbose', help="increase output verbosity",\
+        action='store_true')
     args = parser.parse_args()
+
+    logger = verboselogs.VerboseLogger('cottontail')
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.VERBOSE)
+    coloredlogs.install(
+        fmt='%(asctime)s %(levelname)s %(message)s',
+        logger=logger,
+        level='debug' if args.verbose else 'verbose'
+    )
 
     o = urlparse(args.url)
     if o.port is None:
