@@ -22,7 +22,7 @@ This tool uses rabbitmq-management HTTP API to request information about vhosts,
 virtualenv ve
 source ./ve/bin/activate
 pip install -r requirements
-python main.py --url http://localhost:15672/ --username guest --password guest
+python main.py http://localhost:15672/ --username guest --password guest
 ```
 
 You should see something along those lines:
@@ -77,6 +77,12 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 
 ## Changelog
+
+### v0.4.0
+
+* add verbose logging (show messages properties and header)
+* include all message properties when requeuing
+* better argument parsing and ASCII art bunny :)
 
 ### v0.3.0
 
