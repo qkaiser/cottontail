@@ -175,12 +175,11 @@ def subproc(host, port, ssl, username, password, vhost_name):
 
             channel.exchange_declare(
                 exchange=exchange["name"],
-                exchange_type=exchange["type"]
+                exchange_type=exchange["type"],
+                durable=exchange["durable"],
+                internal=exchange["internal"],
+                auto_delete=exchange["auto_delete"]
             )
-            result = channel.queue_declare(exclusive=True)
-            queue_name = result.method.queue
-
-            #bind the queue to the exchange with a wildcard routing key
             if exchange["type"] == "direct":
                 routing_keys = []
                 bindings = rbmq.get_bindings(vhost_name)
@@ -191,8 +190,10 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 routing_keys = ["#"]
 
             for routing_key in routing_keys:
+                result = channel.queue_declare(exclusive=True)
+                queue_name = result.method.queue
                 logger.info("Binding queue "\
-                        "[vhost=%s][exchange=%s][queue=%s][routing_key=%s]" % \
+                    "[vhost=%s][exchange=%s][queue=%s][routing_key=%s]" % \
                 (exchange["vhost"], exchange["name"], queue_name, routing_key))
                 channel.queue_bind(
                     exchange=exchange["name"],
@@ -202,9 +203,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 channel.basic_consume(callback, queue=queue_name, no_ack=True)
 
     try:
-        #hacky way to only show the message once
-        if vhost_name == "/":
-            logger.warning('Waiting for messages. To exit press CTRL+C')
+        logger.warning('[%s] Waiting for messages. To exit press CTRL+C' % vhost_name)
         channel.start_consuming()
     except KeyboardInterrupt:
         logger.info("Closing connection")
