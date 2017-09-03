@@ -316,4 +316,4 @@ if __name__ == "__main__":
                                         message["payload"]))
 
     except UnauthorizedAccessException as e:
-        print e.message
+        logger.error(e.message)
