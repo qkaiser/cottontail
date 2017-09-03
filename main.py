@@ -85,12 +85,17 @@ def subproc(host, port, ssl, username, password, vhost_name):
         import ssl as s
         ssl_options["cert_reqs"] = s.CERT_NONE
 
-    credentials = pika.PlainCredentials(username, password)
-    parameters = pika.ConnectionParameters(
-        host=host, port=port, virtual_host=vhost_name,
-        credentials=credentials, ssl=ssl, ssl_options=ssl_options)
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
+    try:
+        credentials = pika.PlainCredentials(username, password)
+        parameters = pika.ConnectionParameters(
+            host=host, port=port, virtual_host=vhost_name,
+            credentials=credentials, ssl=ssl, ssl_options=ssl_options)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+    except pika.exceptions.ProbableAccessDeniedError as e:
+        logger.warning("Access to vhost '%s' refused for user '%s'" % (vhost_name, username))
+        connection.close()
+        return
 
     def callback(ch, method, properties, body):
         """
