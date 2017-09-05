@@ -15,7 +15,7 @@ Example:
 .. _Google Python Style Guide:
     http://google.github.io/styleguide/pyguide.html
 """
-from urllib import quote
+from urllib.parse import quote
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -67,7 +67,7 @@ class RabbitMQManagementClient(object):
             UnauthorizedException
         """
         response = requests.get(
-            "%s://%s:%d/api/%s" % (self._scheme, self._host, self._port, path),
+            "{}://{}:{}/api/{}".format(self._scheme, self._host, self._port, path),
             auth=(self._username, self._password),
             verify=False
         )
@@ -76,7 +76,7 @@ class RabbitMQManagementClient(object):
             return response.json()
         elif response.status_code == 401:
             raise UnauthorizedAccessException(
-                "Authorization error: can't access /api/%s" % path)
+                "Authorization error: can't access /api/{}".format(path))
         else:
             raise Exception("An error occured")
 
@@ -94,7 +94,7 @@ class RabbitMQManagementClient(object):
             UnauthorizedException
         """
         response = requests.post(
-            "%s://%s:%d/api/%s" % (self._scheme, self._host, self._port, path),
+            "{}://{}:{}/api/{}".format(self._scheme, self._host, self._port, path),
             auth=(self._username, self._password),
             json=data,
             verify=False
@@ -104,7 +104,7 @@ class RabbitMQManagementClient(object):
             return response.json()
         elif response.status_code == 401:
             raise UnauthorizedAccessException(
-                "Authorization error: can't access /api/%s" % path)
+                "Authorization error: can't access /api/{}".format(path))
         else:
             raise Exception("An error occured")
 
@@ -137,8 +137,8 @@ class RabbitMQManagementClient(object):
         """
         An individual node in the RabbitMQ cluster.
         """
-        return self.get_request("nodes/%s?memory=%s&binary=%s" % \
-            (name, str(memory).lower(), str(binary).lower()))
+        return self.get_request("nodes/{}?memory={}&binary={}".format(
+            name, str(memory).lower(), str(binary).lower()))
 
     def get_definitions(self, vhost=None):
         """
@@ -147,7 +147,8 @@ class RabbitMQManagementClient(object):
         Everything apart from messages.
         """
         if vhost is not None:
-            return self.get_request("definitions/%s" % quote(vhost, safe=''))
+            return self.get_request("definitions/{}".format(
+                quote(vhost, safe='')))
         return self.get_request("definitions")
 
     def get_connections(self, vhost=None):
@@ -155,35 +156,38 @@ class RabbitMQManagementClient(object):
         A list of all open connections.
         """
         if vhost is not None:
-            return self.get_request("vhosts/%s/connections" % quote(vhost, safe=''))
+            return self.get_request("vhosts/{}/connections".format(
+                quote(vhost, safe='')))
         return self.get_request("connections")
 
     def get_connection(self, name):
         """
         An individual connection.
         """
-        return self.get_request("connections/%s" % name)
+        return self.get_request("connections/{}".format(name))
 
     def get_channels(self, vhost=None):
         """
         A list of all open channels.
         """
         if vhost is not None:
-            return self.get_request("vhosts/%s/channels" % quote(vhost, safe=''))
+            return self.get_request("vhosts/{}/channels".format(
+                quote(vhost, safe='')))
         return self.get_request("channels")
 
     def get_channel(self, name):
         """
         Details about an individual channel.
         """
-        return self.get_request("channels/%s" % name)
+        return self.get_request("channels/{}".format(name))
 
     def get_consumers(self, vhost=None):
         """
         A list of all consumers (in a given vhosts).
         """
         if vhost is not None:
-            return self.get_request("consumers/%s" % quote(vhost, safe=''))
+            return self.get_request("consumers/{}".format(
+                quote(vhost, safe='')))
         return self.get_request("consumers")
 
     def get_exchanges(self, vhost=None):
@@ -191,35 +195,37 @@ class RabbitMQManagementClient(object):
         A list of all exchanges (in a given vhost).
         """
         if vhost is not None:
-            return self.get_request("exchanges/%s" % quote(vhost, safe=''))
+            return self.get_request("exchanges/{}".format(
+                quote(vhost, safe='')))
         return self.get_request("exchanges")
 
     def get_exchange(self, vhost, name):
         """
         An individual exchange.
         """
-        return self.get_request("exchanges/%s/%s" % (quote(vhost, safe=''), name))
+        return self.get_request("exchanges/{}/{}".format(
+            quote(vhost, safe=''), name))
 
     def get_queues(self, vhost=None):
         """
         A list of all queues.
         """
         if vhost is not None:
-            return self.get_request("queues/%s" % quote(vhost, safe=''))
+            return self.get_request("queues/{}".format(quote(vhost, safe='')))
         return self.get_request("queues")
 
     def get_queue(self, vhost, name):
         """
         An individual queue.
         """
-        return self.get_request("queue/%s/%s" % (vhost, name))
+        return self.get_request("queue/{}/{}".format(vhost, name))
 
     def get_messages(self, vhost, queue, count=10, requeue=True):
         """
         Get messages currently stored in queue.
         """
         return self.post_request(
-            "queues/%s/%s/get" % (quote(vhost, safe=''), queue),
+            "queues/{}/{}/get".format(quote(vhost, safe=''), queue),
             {
                 "count": count,
                 "encoding": "auto",
@@ -234,7 +240,8 @@ class RabbitMQManagementClient(object):
         A list of all bindings (in a given virtual host).
         """
         if vhost is not None:
-            return self.get_request("bindings/%s" % quote(vhost, safe=''))
+            return self.get_request("bindings/{}".format(
+                quote(vhost, safe='')))
         return self.get_request("bindings")
 
     def get_vhosts(self):
@@ -247,13 +254,13 @@ class RabbitMQManagementClient(object):
         """
         An individual virtual host.
         """
-        return self.get_request("vhosts/%s" % quote(name, safe=''))
+        return self.get_request("vhosts/{}".format(quote(name, safe='')))
 
     def get_vhost_permissions(self, name):
         """
         A list of all permissions for a given virtual host.
         """
-        return self.get_request("vhosts/%s/permissions" % name)
+        return self.get_request("vhosts/{}/permissions".format(name))
 
     def get_users(self):
         """
@@ -265,7 +272,7 @@ class RabbitMQManagementClient(object):
         """
         An individual user.
         """
-        return self.get_request("users/%s" % name)
+        return self.get_request("users/{}".format(name))
 
     def whoami(self):
         """

@@ -13,7 +13,7 @@ import hashlib
 import multiprocessing
 import signal
 import logging
-from urlparse import urlparse
+from urllib.parse import urlparse
 import argparse
 import socket
 import pika
@@ -24,16 +24,16 @@ from rabbitmq_management import UnauthorizedAccessException
 
 __author__ = 'Quentin Kaiser'
 __email__ = 'kaiserquentin@gmail.com'
-execfile('VERSION')
+__version__ = "0.4.0"
 
 HEADER = """
        /\ /|
        \ V/
-       | "")     Cottontail v%s
-       /  |      %s (%s)
+       | "")     Cottontail v{}
+       /  |      {} ({})
       /  \\\\
     *(__\_\)
-    """ % (__version__, __author__, __email__)
+    """.format(__version__, __author__, __email__)
 
 def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
     """
@@ -77,8 +77,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
     Returns:
         None. Triggered when user hits ctrl-c
     """
-    logger.verbose("Connecting to amqp%s://%s:%d/%s" % \
-        ("s" if ssl else "", host, port, vhost_name))
+    logger.verbose("Connecting to amqp{}://{}:{}/{}".format(
+        "s" if ssl else "", host, port, vhost_name))
 
     ssl_options = {}
     if ssl:
@@ -93,7 +93,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
     except pika.exceptions.ProbableAccessDeniedError as e:
-        logger.warning("Access to vhost '%s' refused for user '%s'" % (vhost_name, username))
+        logger.warning("Access to vhost '{}' refused for user '{}'".format(
+            vhost_name, username))
         connection.close()
         return
 
@@ -113,26 +114,28 @@ def subproc(host, port, ssl, username, password, vhost_name):
         Returns:
             None
         """
-        logger.info("Message from [vhost=%s][exchange=%s][routing_key=%s]:"\
-            " %r" % (vhost_name, method.exchange, method.routing_key, body))
+        logger.info(
+            "Message from [vhost={}][exchange={}][routing_key={}]: {}".format(
+                vhost_name, method.exchange, method.routing_key, body)
+        )
 
-        logger.debug("\tContent-type: %s" % properties.content_type)
-        logger.debug("\tContent-encoding: %s" % properties.content_encoding)
+        logger.debug("\tContent-type: {}".format(properties.content_type))
+        logger.debug("\tContent-encoding: {}".format(properties.content_encoding))
         logger.debug("\tHeaders:")
         for key in properties.headers:
-            logger.debug("\t\t%s=%s" % (key, properties.headers[key]))
-        logger.debug("\tDelivery-mode: %s" % \
-            "persistent" if properties.delivery_mode == 2 else "non persistent")
-        logger.debug("\tPriority: %s" % properties.priority)
-        logger.debug("\tCorrelation-id: %s" % properties.correlation_id)
-        logger.debug("\tReply-to: %s" % properties.reply_to)
-        logger.debug("\tExpiration: %s" % properties.expiration)
-        logger.debug("\tMessage-id: %s" % properties.message_id)
-        logger.debug("\tTimestamp: %s" % properties.timestamp)
-        logger.debug("\tType: %s" % properties.type)
-        logger.debug("\tUser-id: %s" % properties.user_id)
-        logger.debug("\tApp-id: %s" % properties.app_id)
-        logger.debug("\tCluster-id: %s" % properties.cluster_id)
+            logger.debug("\t\t{}={}" % (key, properties.headers[key]))
+        logger.debug("\tDelivery-mode: {}".format("persistent" \
+                if properties.delivery_mode == 2 else "non persistent"))
+        logger.debug("\tPriority: {}".format(properties.priority))
+        logger.debug("\tCorrelation-id: {}".format(properties.correlation_id))
+        logger.debug("\tReply-to: {}".format(properties.reply_to))
+        logger.debug("\tExpiration: {}".format(properties.expiration))
+        logger.debug("\tMessage-id: {}".format(properties.message_id))
+        logger.debug("\tTimestamp: {}".format(properties.timestamp))
+        logger.debug("\tType: {}".format(properties.type))
+        logger.debug("\tUser-id: {}".format(properties.user_id))
+        logger.debug("\tApp-id: {}".format(properties.app_id))
+        logger.debug("\tCluster-id: {}".format(properties.cluster_id))
 
         # check if a consumer is present if we need to requeue
         consumer_present = False
@@ -170,8 +173,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
 
     for queue in rbmq.get_queues(vhost=vhost_name):
         if not queue["name"].startswith("amq."):
-            logger.info("Declaring queue [vhost=%s][queue=%s]" % \
-                    (vhost_name, queue["name"]))
+            logger.info("Declaring queue [vhost={}][queue={}]".format(
+                vhost_name, queue["name"]))
             channel.queue_declare(queue=queue["name"], durable=queue["durable"])
             channel.basic_consume(callback, queue=queue["name"], no_ack=True)
 
@@ -197,9 +200,15 @@ def subproc(host, port, ssl, username, password, vhost_name):
             for routing_key in routing_keys:
                 result = channel.queue_declare(exclusive=True)
                 queue_name = result.method.queue
-                logger.info("Binding queue "\
-                    "[vhost=%s][exchange=%s][queue=%s][routing_key=%s]" % \
-                (exchange["vhost"], exchange["name"], queue_name, routing_key))
+                logger.info(
+                    "Binding queue [vhost={}][exchange={}][queue={}]"\
+                    "[routing_key={}]".format(
+                        exchange["vhost"],
+                        exchange["name"],
+                        queue_name,
+                        routing_key
+                    )
+            )
                 channel.queue_bind(
                     exchange=exchange["name"],
                     queue=queue_name,
@@ -208,7 +217,9 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 channel.basic_consume(callback, queue=queue_name, no_ack=True)
 
     try:
-        logger.warning('[%s] Waiting for messages. To exit press CTRL+C' % vhost_name)
+        logger.warning(
+            "[{}] Waiting for messages. To exit press CTRL+C".format(vhost_name)
+        )
         channel.start_consuming()
     except KeyboardInterrupt:
         logger.info("Closing connection")
@@ -222,7 +233,7 @@ def init_worker():
 
 if __name__ == "__main__":
 
-    print HEADER
+    print(HEADER)
     parser = argparse.ArgumentParser(description=\
         "Capture all RabbitMQ messages being sent through a broker.")
     parser.add_argument('url', type=str, help="rabbitmq_management URL")
@@ -261,13 +272,13 @@ if __name__ == "__main__":
         vhosts = rbmq.get_vhosts()
 
         # Some useful information
-        logger.verbose("Successful connection to '%s' as user '%s'" % \
-                (o.geturl(), user["name"]))
-        logger.verbose("cluster: %s" % overview["cluster_name"])
-        logger.verbose("version: RabbitMQ %s, Erlang %s" % \
-                (overview["rabbitmq_version"], overview["erlang_version"]))
-        logger.verbose("%d vhosts detected: %s" % \
-                (len(vhosts), ", ".join([vhost["name"] for vhost in vhosts])))
+        logger.verbose("Successful connection to '{}' as user '{}'".format(
+            o.geturl(), user["name"]))
+        logger.verbose("cluster: {}".format(overview["cluster_name"]))
+        logger.verbose("version: RabbitMQ {}, Erlang {}".format(
+            overview["rabbitmq_version"], overview["erlang_version"]))
+        logger.verbose("{} vhosts detected: {}".format(
+            len(vhosts), ", ".join([vhost["name"] for vhost in vhosts])))
 
         rabbit_ip = socket.gethostbyname(o.hostname)
         amqp_listener = None
@@ -309,8 +320,8 @@ if __name__ == "__main__":
                     if not queue["name"].startswith("amq."):
                         for message in rbmq.get_messages(vhost["name"],\
                                 queue["name"], count=10000):
-                            logger.info("Message from [vhost=%s][exchange=%s]"\
-                                    "[routing_key=%s]: %s" % (
+                            logger.info("Message from [vhost={}][exchange={}]"\
+                                    "[routing_key={}]: {}".format(
                                         vhost["name"], message["exchange"],
                                         message["routing_key"],
                                         message["payload"]))
