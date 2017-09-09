@@ -13,7 +13,10 @@ import hashlib
 import multiprocessing
 import signal
 import logging
-from urllib.parse import urlparse
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 import argparse
 import socket
 import pika

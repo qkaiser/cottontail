@@ -15,7 +15,10 @@ Example:
 .. _Google Python Style Guide:
     http://google.github.io/styleguide/pyguide.html
 """
-from urllib.parse import quote
+try:
+    from urllib.parse import quote
+except ImportError:
+    from urllib import quote
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
