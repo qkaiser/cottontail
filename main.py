@@ -27,7 +27,7 @@ from rabbitmq_management import UnauthorizedAccessException
 
 __author__ = 'Quentin Kaiser'
 __email__ = 'kaiserquentin@gmail.com'
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 HEADER = """
        /\ /|

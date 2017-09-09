@@ -78,6 +78,11 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.5.0
+
+* bug fix for direct exchange bindings
+* add support for Python3
+
 ### v0.4.0
 
 * add verbose logging (show messages properties and header)
