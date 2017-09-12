@@ -72,12 +72,13 @@ class RabbitMQManagementClient(object):
         response = requests.get(
             "{}://{}:{}/api/{}".format(self._scheme, self._host, self._port, path),
             auth=(self._username, self._password),
-            verify=False
+            verify=False,
+            timeout=5
         )
 
         if response.status_code == 200:
             return response.json()
-        elif response.status_code == 401:
+        elif response.status_code == 401 or response.status_code == 403:
             raise UnauthorizedAccessException(
                 "Authorization error: can't access /api/{}".format(path))
         else:
