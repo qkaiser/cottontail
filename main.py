@@ -174,52 +174,56 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 body=body,
             )
 
-    for queue in rbmq.get_queues(vhost=vhost_name):
-        if not queue["name"].startswith("amq."):
-            logger.info("Declaring queue [vhost={}][queue={}]".format(
-                vhost_name, queue["name"]))
-            channel.queue_declare(queue=queue["name"], durable=queue["durable"])
-            channel.basic_consume(callback, queue=queue["name"], no_ack=True)
-
-    for exchange in rbmq.get_exchanges(vhost=vhost_name):
-        if not exchange["name"].startswith("amq.") and exchange["name"] != '':
-
-            channel.exchange_declare(
-                exchange=exchange["name"],
-                exchange_type=exchange["type"],
-                durable=exchange["durable"],
-                internal=exchange["internal"],
-                auto_delete=exchange["auto_delete"]
-            )
-            if exchange["type"] == "direct":
-                routing_keys = []
-                bindings = rbmq.get_bindings(vhost_name)
-                for binding in bindings:
-                    if binding["source"] == exchange["name"]:
-                        routing_keys.append(binding["routing_key"])
-            else:
-                routing_keys = ["#"]
-
-            for routing_key in routing_keys:
-                result = channel.queue_declare(exclusive=True)
-                queue_name = result.method.queue
-                logger.info(
-                    "Binding queue [vhost={}][exchange={}][queue={}]"\
-                    "[routing_key={}]".format(
-                        exchange["vhost"],
-                        exchange["name"],
-                        queue_name,
-                        routing_key
-                    )
-            )
-                channel.queue_bind(
-                    exchange=exchange["name"],
-                    queue=queue_name,
-                    routing_key=routing_key
-                )
-                channel.basic_consume(callback, queue=queue_name, no_ack=True)
-
     try:
+        for queue in rbmq.get_queues(vhost=vhost_name):
+            if not queue["name"].startswith("amq."):
+                logger.info("Declaring queue [vhost={}][queue={}]".format(
+                    vhost_name, queue["name"]))
+                channel.queue_declare(
+                    queue=queue["name"],
+                    durable=queue["durable"],
+                    auto_delete=queue["auto_delete"],
+                    arguments=queue["arguments"]
+                )
+                channel.basic_consume(callback, queue=queue["name"], no_ack=True)
+
+        for exchange in rbmq.get_exchanges(vhost=vhost_name):
+            if not exchange["name"].startswith("amq.") and exchange["name"] != '':
+                channel.exchange_declare(
+                    exchange=exchange["name"],
+                    exchange_type=exchange["type"],
+                    durable=exchange["durable"],
+                    internal=exchange["internal"],
+                    auto_delete=exchange["auto_delete"],
+                    arguments=exchange["arguments"]
+                )
+                if exchange["type"] == "direct":
+                    routing_keys = []
+                    bindings = rbmq.get_bindings(vhost_name)
+                    for binding in bindings:
+                        if binding["source"] == exchange["name"]:
+                            routing_keys.append(binding["routing_key"])
+                else:
+                    routing_keys = ["#"]
+
+                for routing_key in routing_keys:
+                    result = channel.queue_declare(exclusive=True)
+                    queue_name = result.method.queue
+                    logger.info(
+                        "Binding queue [vhost={}][exchange={}][queue={}]"\
+                        "[routing_key={}]".format(
+                            exchange["vhost"],
+                            exchange["name"],
+                            queue_name,
+                            routing_key
+                        )
+                    )
+                    channel.queue_bind(
+                        exchange=exchange["name"],
+                        queue=queue_name,
+                        routing_key=routing_key
+                    )
+                    channel.basic_consume(callback, queue=queue_name, no_ack=True)
         logger.warning(
             "[{}] Waiting for messages. To exit press CTRL+C".format(vhost_name)
         )
