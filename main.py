@@ -277,7 +277,7 @@ if __name__ == "__main__":
         # Some useful information
         logger.verbose("Successful connection to '{}' as user '{}'".format(
             o.geturl(), user["name"]))
-        logger.verbose("cluster: {}".format(overview["cluster_name"]))
+        logger.verbose("node: {}".format(overview["node"]))
         logger.verbose("version: RabbitMQ {}, Erlang {}".format(
             overview["rabbitmq_version"], overview["erlang_version"]))
         logger.verbose("{} vhosts detected: {}".format(
@@ -289,7 +289,7 @@ if __name__ == "__main__":
             # we attempt only low level tcp connect here.
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # if bound to all, we try to reach on rabbit_ip
-            if listener["ip_address"] == "::":
+            if listener["ip_address"] in ["::", "0.0.0.0"]:
                 listener["ip_address"] = rabbit_ip
             result = sock.connect_ex((listener["ip_address"], listener["port"]))
             sock.close()
