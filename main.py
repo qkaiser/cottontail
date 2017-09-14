@@ -100,6 +100,10 @@ def subproc(host, port, ssl, username, password, vhost_name):
             vhost_name, username))
         connection.close()
         return
+    except pika.exceptions.ConnectionClosed as e:
+        logger.warning("Connection to vhost '{}' got closed.".format(vhost_name))
+        connection.close()
+        return
 
     def callback(ch, method, properties, body):
         """
@@ -125,8 +129,9 @@ def subproc(host, port, ssl, username, password, vhost_name):
         logger.debug("\tContent-type: {}".format(properties.content_type))
         logger.debug("\tContent-encoding: {}".format(properties.content_encoding))
         logger.debug("\tHeaders:")
-        for key in properties.headers:
-            logger.debug("\t\t{}={}" % (key, properties.headers[key]))
+        if properties.headers is not None:
+            for key in properties.headers:
+                logger.debug("\t\t{}={}" % (key, properties.headers[key]))
         logger.debug("\tDelivery-mode: {}".format("persistent" \
                 if properties.delivery_mode == 2 else "non persistent"))
         logger.debug("\tPriority: {}".format(properties.priority))
