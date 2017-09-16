@@ -78,6 +78,10 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.6.0
+
+* requeuing got way smarter :)
+
 ### v0.5.0
 
 * bug fix for direct exchange bindings
