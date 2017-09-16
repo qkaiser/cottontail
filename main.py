@@ -132,8 +132,17 @@ def subproc(host, port, ssl, username, password, vhost_name):
         # if other consumers are present, we requeue the message so we don't
         # mess things up.
         if not unique_header_present:
+            # we insert our unique header
             headers = properties.headers if properties.headers is not None else {}
             headers[unique_header] = 1
+
+            # if user_id is set to a different value than the user we authenticated
+            # with, we remove it so we don't trigger a "PRECONDITION_FAILED -
+            # user_id property set to 'xxx' but authenticated user was 'xxx'"
+            if properties.user_id is not None and\
+                properties.user_id != username:
+                properties.user_id = None
+
             ch.basic_publish(
                 exchange=method.exchange,
                 routing_key=method.routing_key,
