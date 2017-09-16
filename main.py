@@ -23,6 +23,7 @@ import pika
 import coloredlogs
 import verboselogs
 from uuid import uuid4
+import re
 from rabbitmq_management import RabbitMQManagementClient
 from rabbitmq_management import UnauthorizedAccessException
 
@@ -81,6 +82,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
         return
 
     unique_header = str(uuid4())
+    permissions = rbmq.get_permissions(vhost_name, username)
 
     def callback(ch, method, properties, body):
         """
@@ -143,33 +145,40 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 properties.user_id != username:
                 properties.user_id = None
 
-            ch.basic_publish(
-                exchange=method.exchange,
-                routing_key=method.routing_key,
-                properties=pika.BasicProperties(
-                    content_type=properties.content_type,
-                    content_encoding=properties.content_encoding,
-                    headers=headers,
-                    delivery_mode=properties.delivery_mode,
-                    priority=properties.priority,
-                    correlation_id=properties.correlation_id,
-                    reply_to=properties.reply_to,
-                    expiration=properties.expiration,
-                    message_id=properties.message_id,
-                    timestamp=properties.timestamp,
-                    type=properties.type,
-                    user_id=properties.user_id,
-                    app_id=properties.app_id,
-                    cluster_id=properties.cluster_id
-                ),
-                body=body,
-            )
+            # check 'write' permission on exchange name
+            if re.match(permissions["write"], method.exchange) is not None:
+                ch.basic_publish(
+                    exchange=method.exchange,
+                    routing_key=method.routing_key,
+                    properties=pika.BasicProperties(
+                        content_type=properties.content_type,
+                        content_encoding=properties.content_encoding,
+                        headers=headers,
+                        delivery_mode=properties.delivery_mode,
+                        priority=properties.priority,
+                        correlation_id=properties.correlation_id,
+                        reply_to=properties.reply_to,
+                        expiration=properties.expiration,
+                        message_id=properties.message_id,
+                        timestamp=properties.timestamp,
+                        type=properties.type,
+                        user_id=properties.user_id,
+                        app_id=properties.app_id,
+                        cluster_id=properties.cluster_id
+                    ),
+                    body=body,
+                )
+            else:
+                logger.debug("Cannot write to queue, not requeuing")
 
     try:
         for queue in rbmq.get_queues(vhost=vhost_name):
-            if not queue["name"].startswith("amq."):
+            if not queue["name"].startswith("amq.") and\
+                    re.match(permissions["read"], queue["name"]) is not None:
                 logger.info("Declaring queue [vhost={}][queue={}]".format(
                     vhost_name, queue["name"]))
+                # we are declaring the queue passively so we don't need
+                # to check the 'configure' permission
                 channel.queue_declare(
                     queue=queue["name"],
                     durable=queue["durable"],
@@ -179,7 +188,13 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 channel.basic_consume(callback, queue=queue["name"], no_ack=True)
 
         for exchange in rbmq.get_exchanges(vhost=vhost_name):
-            if not exchange["name"].startswith("amq.") and exchange["name"] != '':
+            if not exchange["name"].startswith("amq.") and\
+                exchange["name"] != '' and\
+                re.match(permissions["read"], exchange["name"]) is not None and\
+                re.match(permissions["read"], "amq.gen-") is not None:
+
+                # declaration is passive so we don't need to check
+                # the 'configure' permission
                 channel.exchange_declare(
                     exchange=exchange["name"],
                     exchange_type=exchange["type"],
@@ -198,6 +213,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
                     routing_keys = ["#"]
 
                 for routing_key in routing_keys:
+                    # declaration is passive so we don't need to check the
+                    # 'configure' permission
                     result = channel.queue_declare(exclusive=True)
                     queue_name = result.method.queue
                     logger.info(
@@ -209,12 +226,17 @@ def subproc(host, port, ssl, username, password, vhost_name):
                             routing_key
                         )
                     )
+                    # we checked 'read' permission on exchange name so we can
+                    # go on.
                     channel.queue_bind(
                         exchange=exchange["name"],
                         queue=queue_name,
                         routing_key=routing_key
                     )
+                    # we checked 'read' permission on auto-generated queue
+                    # name format
                     channel.basic_consume(callback, queue=queue_name, no_ack=True)
+
         logger.warning(
             "[{}] Waiting for messages. To exit press CTRL+C".format(vhost_name)
         )
@@ -298,13 +320,24 @@ if __name__ == "__main__":
             pool = multiprocessing.Pool(len(rbmq.get_vhosts()))
             try:
                 for vhost in rbmq.get_vhosts():
-                    pool.apply_async(subproc, \
-                        (amqp_listener["ip_address"], amqp_listener["port"],\
-                        amqp_listener["protocol"] == "amqp/ssl",\
-                        args.username, args.password, vhost["name"],))
+                    # we check the permissions and only launch a process if
+                    # our user is allowed access to this specific vhost.
+                    permissions = rbmq.get_permissions(
+                        vhost["name"],
+                        args.username
+                    )
+                    if permissions is not None:
+                        pool.apply_async(subproc, \
+                            (amqp_listener["ip_address"], amqp_listener["port"],\
+                            amqp_listener["protocol"] == "amqp/ssl",\
+                            args.username, args.password, vhost["name"],))
+                    else:
+                        logger.warning(
+                            "Access to vhost '{}' refused for user '{}'"\
+                            .format(vhost["name"], args.username)
+                        )
                 pool.close()
                 pool.join()
-
             except KeyboardInterrupt:
                 logger.info("Caught KeyboardInterrupt, terminating workers")
                 pool.terminate()
