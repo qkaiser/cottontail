@@ -132,7 +132,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
         # if other consumers are present, we requeue the message so we don't
         # mess things up.
         if not unique_header_present:
-            headers = properties.headers
+            headers = properties.headers if properties.headers is not None else {}
             headers[unique_header] = 1
             ch.basic_publish(
                 exchange=method.exchange,
