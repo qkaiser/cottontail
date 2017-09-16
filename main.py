@@ -38,32 +38,6 @@ HEADER = """
     *(__\_\)
     """.format(__version__, __author__, __email__)
 
-def crack(hashed, candidate, method="rabbit_password_hashing_sha256"):
-    """
-    You can dump password hashes if you have administrator privileges. This
-    is a simple attempt at writing a cracking function :)
-
-    Documentation on rabbitmq hashes https://www.rabbitmq.com/passwords.html
-
-    Args:
-        hashed (str): password hash
-        candidate (str): plaintext to compare hash to
-        method (str): rabbitmq hashing method
-
-    Returns:
-        boolean. True if valid candidate, False otherwise.
-    """
-    if method == "rabbit_password_hashing_sha256":
-        decoded = base64.b64decode(hashed).encode('hex')
-        hex_salt = decoded[0:8]
-        hex_hash = decoded[8:]
-        hex_hash_candidate = hashlib.sha256(
-            hex_salt.decode('hex') + candidate
-        ).hexdigest()
-        return hex_hash == hex_hash_candidate
-    else:
-        raise Exception("Not supported yet")
-
 def subproc(host, port, ssl, username, password, vhost_name):
     """
     Function that is launched within a process. We launch one process per
