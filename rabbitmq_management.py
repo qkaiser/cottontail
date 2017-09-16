@@ -81,6 +81,8 @@ class RabbitMQManagementClient(object):
         elif response.status_code == 401 or response.status_code == 403:
             raise UnauthorizedAccessException(
                 "Authorization error: can't access /api/{}".format(path))
+        elif response.status_code == 404:
+            return None
         else:
             raise Exception("An error occured")
 
@@ -106,7 +108,7 @@ class RabbitMQManagementClient(object):
 
         if response.status_code == 200:
             return response.json()
-        elif response.status_code == 401:
+        elif response.status_code == 401 or response.status_code == 403:
             raise UnauthorizedAccessException(
                 "Authorization error: can't access /api/{}".format(path))
         else:
@@ -183,7 +185,7 @@ class RabbitMQManagementClient(object):
         """
         Details about an individual channel.
         """
-        return self.get_request("channels/{}".format(name))
+        return self.get_request("channels/{}".format(name.replace(" ", "%20")))
 
     def get_consumers(self, vhost=None):
         """
