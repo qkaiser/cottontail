@@ -22,6 +22,7 @@ import socket
 import pika
 import coloredlogs
 import verboselogs
+from uuid import uuid4
 from rabbitmq_management import RabbitMQManagementClient
 from rabbitmq_management import UnauthorizedAccessException
 
@@ -79,6 +80,8 @@ def subproc(host, port, ssl, username, password, vhost_name):
         connection.close()
         return
 
+    unique_header = str(uuid4())
+
     def callback(ch, method, properties, body):
         """
         Callback function called when we receive a message from RabbitMQ.
@@ -95,49 +98,49 @@ def subproc(host, port, ssl, username, password, vhost_name):
         Returns:
             None
         """
-        logger.info(
-            "Message from [vhost={}][exchange={}][routing_key={}]: {}".format(
-                vhost_name, method.exchange, method.routing_key, body)
-        )
 
-        logger.debug("\tContent-type: {}".format(properties.content_type))
-        logger.debug("\tContent-encoding: {}".format(properties.content_encoding))
-        logger.debug("\tHeaders:")
+        unique_header_present = False
+        # check if a received message contains our custom header
         if properties.headers is not None:
-            for key in properties.headers:
-                logger.debug("\t\t{}={}" % (key, properties.headers[key]))
-        logger.debug("\tDelivery-mode: {}".format("persistent" \
-                if properties.delivery_mode == 2 else "non persistent"))
-        logger.debug("\tPriority: {}".format(properties.priority))
-        logger.debug("\tCorrelation-id: {}".format(properties.correlation_id))
-        logger.debug("\tReply-to: {}".format(properties.reply_to))
-        logger.debug("\tExpiration: {}".format(properties.expiration))
-        logger.debug("\tMessage-id: {}".format(properties.message_id))
-        logger.debug("\tTimestamp: {}".format(properties.timestamp))
-        logger.debug("\tType: {}".format(properties.type))
-        logger.debug("\tUser-id: {}".format(properties.user_id))
-        logger.debug("\tApp-id: {}".format(properties.app_id))
-        logger.debug("\tCluster-id: {}".format(properties.cluster_id))
+            if unique_header in properties.headers:
+                unique_header_present = True
 
-        # check if a consumer is present if we need to requeue
-        consumer_present = False
-        for channel in rbmq.get_channels():
-            channeld = rbmq.get_channel(channel["name"])
-            for consumer_details in channeld["consumer_details"]:
-                if consumer_details["consumer_tag"] != method.consumer_tag \
-                    and consumer_details["queue"]["name"] == method.routing_key:
-                    consumer_present = True
+        if not unique_header_present:
+            # this is not a message we requeued ourselves
+            logger.info(
+                "Message from [vhost={}][exchange={}][routing_key={}]: {}".format(
+                    vhost_name, method.exchange, method.routing_key, body)
+            )
+
+            logger.debug("\tContent-type: {}".format(properties.content_type))
+            logger.debug("\tContent-encoding: {}".format(properties.content_encoding))
+            logger.debug("\tHeaders: {}".format(properties.headers))
+            logger.debug("\tDelivery-mode: {}".format("persistent" \
+                if properties.delivery_mode == 2 else "non persistent"))
+            logger.debug("\tPriority: {}".format(properties.priority))
+            logger.debug("\tCorrelation-id: {}".format(properties.correlation_id))
+            logger.debug("\tReply-to: {}".format(properties.reply_to))
+            logger.debug("\tExpiration: {}".format(properties.expiration))
+            logger.debug("\tMessage-id: {}".format(properties.message_id))
+            logger.debug("\tTimestamp: {}".format(properties.timestamp))
+            logger.debug("\tType: {}".format(properties.type))
+            logger.debug("\tUser-id: {}".format(properties.user_id))
+            logger.debug("\tApp-id: {}".format(properties.app_id))
+            logger.debug("\tCluster-id: {}".format(properties.cluster_id))
+
 
         # if other consumers are present, we requeue the message so we don't
         # mess things up.
-        if consumer_present:
+        if not unique_header_present:
+            headers = properties.headers
+            headers[unique_header] = 1
             ch.basic_publish(
                 exchange=method.exchange,
                 routing_key=method.routing_key,
                 properties=pika.BasicProperties(
                     content_type=properties.content_type,
                     content_encoding=properties.content_encoding,
-                    headers=properties.headers,
+                    headers=headers,
                     delivery_mode=properties.delivery_mode,
                     priority=properties.priority,
                     correlation_id=properties.correlation_id,
