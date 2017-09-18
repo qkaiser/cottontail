@@ -170,18 +170,32 @@ def subproc(host, port, ssl, username, password, vhost_name):
 
         for queue in rbmq.get_queues(vhost=vhost_name):
             if not queue["name"].startswith("amq.") and\
-                    re.match(permissions["read"], queue["name"]) is not None:
-                logger.info("Declaring queue [vhost={}][queue={}]".format(
-                    vhost_name, queue["name"]))
-                # we are declaring the queue passively so we don't need
-                # to check the 'configure' permission
-                channel.queue_declare(
-                    queue=queue["name"],
-                    durable=queue["durable"],
-                    auto_delete=queue["auto_delete"],
-                    arguments=queue["arguments"]
-                )
-                channel.basic_consume(callback, queue=queue["name"], no_ack=True)
+                re.match(permissions["read"], queue["name"]) is not None:
+                if re.match(permissions["write"], "") is not None:
+                    logger.info("Declaring queue [vhost={}][queue={}]".format(
+                        vhost_name, queue["name"]))
+                    # we are declaring the queue passively so we don't need
+                    # to check the 'configure' permission
+                    channel.queue_declare(
+                        queue=queue["name"],
+                        durable=queue["durable"],
+                        auto_delete=queue["auto_delete"],
+                        arguments=queue["arguments"]
+                    )
+                    channel.basic_consume(callback, queue=queue["name"], no_ack=True)
+                else:
+                    # if we declare the queue and start consuming without being
+                    # authorized to write, we will intercept messages that will
+                    # never reach their legitimate consumer given that we won't
+                    # be able to re-queue that message. Therefore, we do not
+                    # declare queues that we do not have write permissions on.
+                    # It's a design decision, feel free to remove those checks
+                    # if you feel like being aggressive today :)
+                    logger.warning(
+                        "Not delaring queue [vhost={}][queue={}] due to "\
+                        "missing write permissions."\
+                        .format(vhost_name, queue["name"])
+                    )
 
         for exchange in rbmq.get_exchanges(vhost=vhost_name):
             if not exchange["name"].startswith("amq.") and\
