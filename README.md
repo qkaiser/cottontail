@@ -111,4 +111,5 @@ Initial release
 
 ## References
 
-Something something
+* "How to silently capture RabbitMQ messages" - http://quentinkaiser.be/security/tool/2017/08/28/cottontail-release/
+
