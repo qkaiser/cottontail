@@ -262,11 +262,18 @@ class RabbitMQManagementClient(object):
         """
         return self.get_request("vhosts/{}".format(quote(name, safe='')))
 
-    def get_vhost_permissions(self, name):
+    def get_permissions(self, name=None, username=None):
         """
-        A list of all permissions for a given virtual host.
+        A list of all permissions.
         """
-        return self.get_request("vhosts/{}/permissions".format(name))
+        if name is None:
+            return self.get_request("permissions")
+        else:
+            if username is None:
+                return self.get_request("permissions/{}".format(quote(name, safe='')))
+            else:
+                return self.get_request("permissions/{}/{}".format(
+                    quote(name, safe=''), quote(username, safe='')))
 
     def get_users(self):
         """
