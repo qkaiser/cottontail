@@ -8,8 +8,6 @@
 """
 Module docstring.
 """
-import base64
-import hashlib
 import multiprocessing
 import signal
 import logging
@@ -19,11 +17,11 @@ except ImportError:
     from urllib.parse import urlparse
 import argparse
 import socket
+from uuid import uuid4
+import re
 import pika
 import coloredlogs
 import verboselogs
-from uuid import uuid4
-import re
 from rabbitmq_management import RabbitMQManagementClient
 from rabbitmq_management import UnauthorizedAccessException
 
@@ -31,12 +29,12 @@ __author__ = 'Quentin Kaiser'
 __email__ = 'kaiserquentin@gmail.com'
 __version__ = "0.6.0"
 
-HEADER = """
+HEADER = r"""
        /\ /|
        \ V/
        | "")     Cottontail v{}
        /  |      {} ({})
-      /  \\\\
+      /  \\
     *(__\_\)
     """.format(__version__, __author__, __email__)
 
@@ -71,107 +69,105 @@ def subproc(host, port, ssl, username, password, vhost_name):
             credentials=credentials, ssl=ssl, ssl_options=ssl_options)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-    except pika.exceptions.ProbableAccessDeniedError as e:
-        logger.warning("Access to vhost '{}' refused for user '{}'".format(
-            vhost_name, username))
-        connection.close()
-        return
-    except pika.exceptions.ConnectionClosed as e:
-        logger.warning("Connection to vhost '{}' got closed.".format(vhost_name))
-        connection.close()
-        return
 
-    unique_header = str(uuid4())
-    permissions = rbmq.get_permissions(vhost_name, username)
+        # setup ctrl-c handling
+        def term(*args, **kwargs):
+            """ Called when user hit ctrl-c, gracefully close AMQP connection.
+            """
+            logger.info("Closing connection to vhost '{}'".format(vhost_name))
+            connection.close()
+        signal.signal(signal.SIGINT, term)
 
-    def callback(ch, method, properties, body):
-        """
-        Callback function called when we receive a message from RabbitMQ.
+        unique_header = str(uuid4())
+        permissions = rbmq.get_permissions(vhost_name, username)
 
-        Todo:
-            * better handling of body depending on mime type ?
+        def callback(ch, method, properties, body):
+            """
+            Callback function called when we receive a message from RabbitMQ.
 
-        Args:
-            ch (object): pika channel object
-            method (object): RabbitMQ message method
-            properties (object): RabbitMQ message properties
-            body (object): RabbitMQ message body
+            Todo:
+                * better handling of body depending on mime type ?
 
-        Returns:
-            None
-        """
+            Args:
+                ch (object): pika channel object
+                method (object): RabbitMQ message method
+                properties (object): RabbitMQ message properties
+                body (object): RabbitMQ message body
 
-        unique_header_present = False
-        # check if a received message contains our custom header
-        if properties.headers is not None:
-            if unique_header in properties.headers:
-                unique_header_present = True
+            Returns:
+                None
+            """
 
-        if not unique_header_present:
-            # this is not a message we requeued ourselves
-            logger.info(
-                "Message from [vhost={}][exchange={}][routing_key={}]: {}".format(
-                    vhost_name, method.exchange, method.routing_key, body)
-            )
+            unique_header_present = False
+            # check if a received message contains our custom header
+            if properties.headers is not None:
+                if unique_header in properties.headers:
+                    unique_header_present = True
 
-            logger.debug("\tContent-type: {}".format(properties.content_type))
-            logger.debug("\tContent-encoding: {}".format(properties.content_encoding))
-            logger.debug("\tHeaders: {}".format(properties.headers))
-            logger.debug("\tDelivery-mode: {}".format("persistent" \
-                if properties.delivery_mode == 2 else "non persistent"))
-            logger.debug("\tPriority: {}".format(properties.priority))
-            logger.debug("\tCorrelation-id: {}".format(properties.correlation_id))
-            logger.debug("\tReply-to: {}".format(properties.reply_to))
-            logger.debug("\tExpiration: {}".format(properties.expiration))
-            logger.debug("\tMessage-id: {}".format(properties.message_id))
-            logger.debug("\tTimestamp: {}".format(properties.timestamp))
-            logger.debug("\tType: {}".format(properties.type))
-            logger.debug("\tUser-id: {}".format(properties.user_id))
-            logger.debug("\tApp-id: {}".format(properties.app_id))
-            logger.debug("\tCluster-id: {}".format(properties.cluster_id))
-
-
-        # if other consumers are present, we requeue the message so we don't
-        # mess things up.
-        if not unique_header_present:
-            # we insert our unique header
-            headers = properties.headers if properties.headers is not None else {}
-            headers[unique_header] = 1
-
-            # if user_id is set to a different value than the user we authenticated
-            # with, we remove it so we don't trigger a "PRECONDITION_FAILED -
-            # user_id property set to 'xxx' but authenticated user was 'xxx'"
-            if properties.user_id is not None and\
-                properties.user_id != username:
-                properties.user_id = None
-
-            # check 'write' permission on exchange name
-            if re.match(permissions["write"], method.exchange) is not None:
-                ch.basic_publish(
-                    exchange=method.exchange,
-                    routing_key=method.routing_key,
-                    properties=pika.BasicProperties(
-                        content_type=properties.content_type,
-                        content_encoding=properties.content_encoding,
-                        headers=headers,
-                        delivery_mode=properties.delivery_mode,
-                        priority=properties.priority,
-                        correlation_id=properties.correlation_id,
-                        reply_to=properties.reply_to,
-                        expiration=properties.expiration,
-                        message_id=properties.message_id,
-                        timestamp=properties.timestamp,
-                        type=properties.type,
-                        user_id=properties.user_id,
-                        app_id=properties.app_id,
-                        cluster_id=properties.cluster_id
-                    ),
-                    body=body,
+            if not unique_header_present:
+                # this is not a message we requeued ourselves
+                logger.info(
+                    "Message from [vhost={}][exchange={}][routing_key={}]: {}".format(
+                        vhost_name, method.exchange, method.routing_key, body)
                 )
-            else:
-                logger.debug("Cannot write to queue, not requeuing")
 
-    try:
+                logger.debug("\tContent-type: {}".format(properties.content_type))
+                logger.debug("\tContent-encoding: {}".format(properties.content_encoding))
+                logger.debug("\tHeaders: {}".format(properties.headers))
+                logger.debug("\tDelivery-mode: {}".format("persistent" \
+                    if properties.delivery_mode == 2 else "non persistent"))
+                logger.debug("\tPriority: {}".format(properties.priority))
+                logger.debug("\tCorrelation-id: {}".format(properties.correlation_id))
+                logger.debug("\tReply-to: {}".format(properties.reply_to))
+                logger.debug("\tExpiration: {}".format(properties.expiration))
+                logger.debug("\tMessage-id: {}".format(properties.message_id))
+                logger.debug("\tTimestamp: {}".format(properties.timestamp))
+                logger.debug("\tType: {}".format(properties.type))
+                logger.debug("\tUser-id: {}".format(properties.user_id))
+                logger.debug("\tApp-id: {}".format(properties.app_id))
+                logger.debug("\tCluster-id: {}".format(properties.cluster_id))
+
+
+            # if other consumers are present, we requeue the message so we don't
+            # mess things up.
+            if not unique_header_present:
+                # we insert our unique header
+                headers = properties.headers if properties.headers is not None else {}
+                headers[unique_header] = 1
+
+                # if user_id is set to a different value than the user we authenticated
+                # with, we remove it so we don't trigger a "PRECONDITION_FAILED -
+                # user_id property set to 'xxx' but authenticated user was 'xxx'"
+                if properties.user_id is not None and\
+                    properties.user_id != username:
+                    properties.user_id = None
+
+                # check 'write' permission on exchange name
+                if re.match(permissions["write"], method.exchange) is not None:
+                    ch.basic_publish(
+                        exchange=method.exchange,
+                        routing_key=method.routing_key,
+                        properties=pika.BasicProperties(
+                            content_type=properties.content_type,
+                            content_encoding=properties.content_encoding,
+                            headers=headers,
+                            delivery_mode=properties.delivery_mode,
+                            priority=properties.priority,
+                            correlation_id=properties.correlation_id,
+                            reply_to=properties.reply_to,
+                            expiration=properties.expiration,
+                            message_id=properties.message_id,
+                            timestamp=properties.timestamp,
+                            type=properties.type,
+                            user_id=properties.user_id,
+                            app_id=properties.app_id,
+                            cluster_id=properties.cluster_id
+                        ),
+                        body=body,
+                    )
+                else:
+                    logger.debug("Cannot write to queue, not requeuing")
+
         for queue in rbmq.get_queues(vhost=vhost_name):
             if not queue["name"].startswith("amq.") and\
                     re.match(permissions["read"], queue["name"]) is not None:
@@ -241,9 +237,17 @@ def subproc(host, port, ssl, username, password, vhost_name):
             "[{}] Waiting for messages. To exit press CTRL+C".format(vhost_name)
         )
         channel.start_consuming()
-    except KeyboardInterrupt:
-        logger.info("Closing connection")
+    except pika.exceptions.ProbableAccessDeniedError as e:
+        logger.warning("Access to vhost '{}' denied for user '{}'".format(
+            vhost_name, username))
         connection.close()
+        return
+    except pika.exceptions.ConnectionClosed as e:
+        logger.warning("Connection to vhost '{}' got closed.".format(vhost_name))
+        connection.close()
+        return
+    except Exception as e:
+        logger.error("An exception occured: {}".format(e))
         return
 
 def init_worker():
@@ -317,7 +321,7 @@ if __name__ == "__main__":
 
         if amqp_listener is not None:
             # Launch one process per vhost
-            pool = multiprocessing.Pool(len(rbmq.get_vhosts()))
+            pool = multiprocessing.Pool(len(rbmq.get_vhosts()), init_worker)
             try:
                 for vhost in rbmq.get_vhosts():
                     # we check the permissions and only launch a process if
@@ -333,8 +337,8 @@ if __name__ == "__main__":
                             args.username, args.password, vhost["name"],))
                     else:
                         logger.warning(
-                            "Access to vhost '{}' refused for user '{}'"\
-                            .format(vhost["name"], args.username)
+                            "User '{}' is not authorized to access vhost '{}'"\
+                            .format(args.username, vhost["name"])
                         )
                 pool.close()
                 pool.join()
