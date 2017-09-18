@@ -4,8 +4,6 @@ A set of scripts to capture RabbitMQ messages being sent through that broker.
 
 ![cute](cottontail.jpg)
 
-!! THIS IS STILL EXPERIMENTAL. DO. NOT. MESS. WITH. LIVE. SYSTEMS. !!
-
 ## Installation
 
 ### Prerequisites
