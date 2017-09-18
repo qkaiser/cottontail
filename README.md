@@ -78,6 +78,11 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.7.0
+
+* handle permissions and access control (no AMQP connections to vhost we're not authorized to access, checks read and write permissions prior to consuming from queues and exchanges).
+* better exception handling (AMQP connection is gracefully closed on interrupt signal)
+
 ### v0.6.0
 
 * requeuing got way smarter :)
