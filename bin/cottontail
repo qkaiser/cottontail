@@ -21,13 +21,10 @@ from uuid import uuid4
 import re
 import pika
 import coloredlogs
+import time
 import verboselogs
-from rabbitmq_management import RabbitMQManagementClient
-from rabbitmq_management import UnauthorizedAccessException
-
-__author__ = 'Quentin Kaiser'
-__email__ = 'kaiserquentin@gmail.com'
-__version__ = "0.6.0"
+from cottontail.rabbitmq_management import *
+from cottontail import __version__, __author__, __email__
 
 HEADER = r"""
        /\ /|
