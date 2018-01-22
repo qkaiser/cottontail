@@ -40,3 +40,4 @@ def crack(hashed, candidate, method="rabbit_password_hashing_md5"):
     else:
         raise Exception("Hashing method '{}' not supported".format(method))
     return hex_hash == hex_hash_candidate
+
