@@ -72,7 +72,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
             """ Called when user hit ctrl-c, gracefully close AMQP connection.
             """
             logger.info("Closing connection to vhost '{}'".format(vhost_name))
-            connection.close()
+            channel.stop_consuming()
         signal.signal(signal.SIGINT, term)
 
         unique_header = str(uuid4())
@@ -250,6 +250,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
             "[{}] Waiting for messages. To exit press CTRL+C".format(vhost_name)
         )
         channel.start_consuming()
+        return connection.close()
     except pika.exceptions.ProbableAccessDeniedError as e:
         logger.warning("Access to vhost '{}' denied for user '{}'".format(
             vhost_name, username))
