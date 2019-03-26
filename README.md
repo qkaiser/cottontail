@@ -78,7 +78,7 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ### v0.8.0
 
-* fix issue when requeuing (see #22 and #23)
+* fix issue when requeuing (see [#22](https://github.com/QKaiser/cottontail/issues/22) and [#23](https://github.com/QKaiser/cottontail/issues/23))
 
 ### v0.7.0
 
@@ -115,5 +115,5 @@ Initial release
 
 ## References
 
-* "How to silently capture RabbitMQ messages" - http://quentinkaiser.be/security/tool/2017/08/28/cottontail-release/
+* "How to silently capture RabbitMQ messages" - https://quentinkaiser.be/security/tool/2017/08/28/cottontail-release/
 
