@@ -1,5 +1,5 @@
 coloredlogs==7.3
 pika==0.10.0
-requests==2.18.4
-urllib3==1.22
+requests>=2.20.0
+urllib3>=1.23
 verboselogs==1.7
