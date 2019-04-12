@@ -16,11 +16,18 @@ This tool uses rabbitmq-management HTTP API to request information about vhosts,
 
 ### Setup
 
+To install it, just clone the repo and use setup.py (might need sudo rights to install system-wide):
+
 ```
-virtualenv ve
-source ./ve/bin/activate
-pip install -r requirements
-python main.py http://localhost:15672/ --username guest --password guest
+git clone https://github.com/QKaiser/cottontail.git
+cd cottontail
+python setup.py install
+```
+
+Once installed you can call it like this:
+
+```
+cottontail http://localhost:15672/ --username guest --password guest
 ```
 
 You should see something along those lines:
