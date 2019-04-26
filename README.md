@@ -16,6 +16,8 @@ This tool uses rabbitmq-management HTTP API to request information about vhosts,
 
 ### Setup
 
+#### Linux
+
 To install it, just clone the repo and use setup.py (might need sudo rights to install system-wide):
 
 ```
@@ -33,6 +35,39 @@ cottontail http://localhost:15672/ --username guest --password guest
 You should see something along those lines:
 
 ![Screenshot](screenshot.png)
+
+#### Windows
+
+You'll need git and python3 to install cottontail. The easiest way is to install them using [Chocolatey](https://chocolatey.org/).
+
+```
+PS C:\Users> choco install git.install
+PS C:\Users> choco install python3
+```
+
+To install it, just clone the repo and use setup.py (might need administrator privileges to install system-wide):
+
+```
+PS C:\Users> git clone https://github.com/QKaiser/cottontail.git
+PS C:\Users> cd cottontail
+PS C:\Users\cottontail> python setup.py install
+```
+
+Once installed you can call it like this:
+
+```
+PS C:\Users> python C:\Python37\Scripts\cottontail -h
+
+       /\ /|
+       \ V/
+       | "")     Cottontail v0.8.0
+       /  |      Quentin Kaiser (kaiserquentin@gmail.com)
+      /  \\
+    *(__\_\)
+
+usage: cottontail [-h] [--username USERNAME] [--password PASSWORD] [-v] url
+cottontail: error: the following arguments are required: url
+```
 
 ## Operation
 
