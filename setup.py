@@ -22,5 +22,5 @@ setup(
     license                 = 'BSD-3',
     zip_safe                = False,
     install_requires        = [ 'coloredlogs', 'verboselogs', 'pika',\
-        'requests', 'urllib3' ]
+        'requests==2.21.0', 'urllib3==1.21.1' ]
 )
