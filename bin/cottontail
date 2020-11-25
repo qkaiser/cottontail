@@ -172,17 +172,29 @@ def subproc(host, port, ssl, username, password, vhost_name):
             if not queue["name"].startswith("amq.") and\
                 re.match(permissions["read"], queue["name"]) is not None:
                 if re.match(permissions["write"], "") is not None:
-                    logger.info("Declaring queue [vhost={}][queue={}]".format(
-                        vhost_name, queue["name"]))
+                    # don't try to bind on queues with exclusive lock set
+                    if len(queue["exclusive_consumer_tag"]):
+                        logger.warning(
+                            "Not declaring queue [vhost={}][queue={}] due to "\
+                            "exclusive lock.".format(vhost_name, queue["name"])
+                        )
+                        continue
+
                     # we are declaring the queue passively so we don't need
                     # to check the 'configure' permission
+                    logger.info("Declaring queue [vhost={}][queue={}]".format(
+                        vhost_name, queue["name"]))
                     channel.queue_declare(
                         queue=queue["name"],
                         durable=queue["durable"],
                         auto_delete=queue["auto_delete"],
                         arguments=queue["arguments"]
                     )
-                    channel.basic_consume(callback, queue=queue["name"], no_ack=True)
+                    channel.basic_consume(
+                        on_message_callback=callback,
+                        queue=queue["name"],
+                        auto_ack=False
+                    )
                 else:
                     # if we declare the queue and start consuming without being
                     # authorized to write, we will intercept messages that will
