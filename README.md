@@ -118,6 +118,11 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.8.1
+
+* use latest version of all external libraries (no specific version requirement)
+* pika API changed again, cottontail now support the latest calling convention
+
 ### v0.8.0
 
 * fix issue when requeuing (see [#22](https://github.com/QKaiser/cottontail/issues/22) and [#23](https://github.com/QKaiser/cottontail/issues/23))
