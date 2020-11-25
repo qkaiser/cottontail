@@ -54,8 +54,9 @@ def subproc(host, port, ssl, username, password, vhost_name):
     logger.verbose("Connecting to amqp{}://{}:{}/{}".format(
         "s" if ssl else "", host, port, vhost_name))
 
-    ssl_options = {}
+    ssl_options = None
     if ssl:
+        ssl_options = {}
         import ssl as s
         ssl_options["cert_reqs"] = s.CERT_NONE
 
@@ -63,7 +64,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
         credentials = pika.PlainCredentials(username, password)
         parameters = pika.ConnectionParameters(
             host=host, port=port, virtual_host=vhost_name,
-            credentials=credentials, ssl=ssl, ssl_options=ssl_options)
+            credentials=credentials, ssl_options=ssl_options)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
 
@@ -224,7 +225,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 for routing_key in routing_keys:
                     # declaration is passive so we don't need to check the
                     # 'configure' permission
-                    result = channel.queue_declare(exclusive=True)
+                    result = channel.queue_declare(exclusive=True, queue='')
                     queue_name = result.method.queue
                     logger.info(
                         "Binding queue [vhost={}][exchange={}][queue={}]"\
@@ -244,7 +245,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
                     )
                     # we checked 'read' permission on auto-generated queue
                     # name format
-                    channel.basic_consume(callback, queue=queue_name, no_ack=True)
+                    channel.basic_consume(on_message_callback=callback, queue=queue_name, auto_ack=False)
 
         logger.warning(
             "[{}] Waiting for messages. To exit press CTRL+C".format(vhost_name)
