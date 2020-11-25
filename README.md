@@ -2,7 +2,7 @@
 
 A set of scripts to capture RabbitMQ messages being sent through that broker.
 
-![cute](cottontail.jpg)
+![cute](https://raw.githubusercontent.com/QKaiser/cottontail/master/cottontail.jpg)
 
 ## Installation
 
@@ -16,14 +16,12 @@ This tool uses rabbitmq-management HTTP API to request information about vhosts,
 
 ### Setup
 
-#### Linux
+#### Install from Pypi
 
-To install it, just clone the repo and use setup.py (might need sudo rights to install system-wide):
+Just run this command to install the latest version from Pypi:
 
 ```
-git clone https://github.com/QKaiser/cottontail.git
-cd cottontail
-python setup.py install
+pip install cottontail-offensive
 ```
 
 Once installed you can call it like this:
@@ -34,9 +32,20 @@ cottontail http://localhost:15672/ --username guest --password guest
 
 You should see something along those lines:
 
-![Screenshot](screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/QKaiser/cottontail/master/screenshot.png)
 
-#### Windows
+
+#### Install from Source - Linux
+
+To install it, just clone the repo and use setup.py (might need sudo rights to install system-wide):
+
+```
+git clone https://github.com/QKaiser/cottontail.git
+cd cottontail
+python setup.py install
+```
+
+#### Install from source - Windows
 
 You'll need git and python3 to install cottontail. The easiest way is to install them using [Chocolatey](https://chocolatey.org/).
 
@@ -117,6 +126,10 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 
 ## Changelog
+
+### v0.8.3
+
+* release as a Pypi package under the name `cottontail-offensive`
 
 ### v0.8.2
 
