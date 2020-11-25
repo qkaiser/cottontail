@@ -118,6 +118,10 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.8.2
+
+* add support for exclusive locks on queues
+
 ### v0.8.1
 
 * use latest version of all external libraries (no specific version requirement)
