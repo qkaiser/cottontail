@@ -1,8 +1,8 @@
+![logo](logo.png)
+
 # Cottontail
 
 A set of scripts to capture RabbitMQ messages being sent through that broker.
-
-![logo](logo.png)
 
 ## Installation
 
