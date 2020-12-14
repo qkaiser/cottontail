@@ -2,7 +2,7 @@
 
 A set of scripts to capture RabbitMQ messages being sent through that broker.
 
-![cute](https://raw.githubusercontent.com/QKaiser/cottontail/master/cottontail.jpg)
+![logo](logo.png)
 
 ## Installation
 
