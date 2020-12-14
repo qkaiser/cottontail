@@ -1,6 +1,6 @@
-![logo](logo.png)
-
 # Cottontail
+
+![logo](logo.png)
 
 A set of scripts to capture RabbitMQ messages being sent through that broker.
 
