@@ -1,8 +1,8 @@
 # Cottontail
 
-A set of scripts to capture RabbitMQ messages being sent through that broker.
+![logo](https://raw.githubusercontent.com/QKaiser/cottontail/master/logo.png)
 
-![cute](https://raw.githubusercontent.com/QKaiser/cottontail/master/cottontail.jpg)
+A set of scripts to capture RabbitMQ messages being sent through that broker.
 
 ## Installation
 
