@@ -173,7 +173,7 @@ def subproc(host, port, ssl, username, password, vhost_name):
                 re.match(permissions["read"], queue["name"]) is not None:
                 if re.match(permissions["write"], "") is not None:
                     # don't try to bind on queues with exclusive lock set
-                    if len(queue["exclusive_consumer_tag"]):
+                    if "exclusive_consumer_tag" in queue:
                         logger.warning(
                             "Not declaring queue [vhost={}][queue={}] due to "\
                             "exclusive lock.".format(vhost_name, queue["name"])
@@ -188,11 +188,13 @@ def subproc(host, port, ssl, username, password, vhost_name):
                         queue=queue["name"],
                         durable=queue["durable"],
                         auto_delete=queue["auto_delete"],
+                        exclusive=False,
                         arguments=queue["arguments"]
                     )
                     channel.basic_consume(
                         on_message_callback=callback,
                         queue=queue["name"],
+                        exclusive=False,
                         auto_ack=False
                     )
                 else:

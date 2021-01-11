@@ -127,6 +127,11 @@ If you need more information about that docker image: https://hub.docker.com/_/r
 
 ## Changelog
 
+### v0.8.4
+
+* identified and fixed another issue with exclusive locks
+* new logo \o/
+
 ### v0.8.3
 
 * release as a Pypi package under the name `cottontail-offensive`
